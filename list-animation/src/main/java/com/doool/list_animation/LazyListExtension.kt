@@ -42,9 +42,9 @@ inline fun <T> LazyListScope.animateItemsIndexed(
           .offset { IntOffset(0, item.moveOffset.value) }
           .zIndex(item.zIndex()),
         visibleState = item.visibility,
-        // Add 1. 아이템 생성시에 추가되 애니메이션 진행
+        // Add 1. 아이템 생성시에 추가 애니메이션 진행
         enter = if (item.isAdded()) enterTransition else EnterTransition.None,
-        // Remove 1. 아이템 제거시에 사라지는 애니메이션 진행
+        // Remove 1. 아이템 제거시에 제거 애니메이션 진행
         exit = if (item.isRemoved()) exitTransition else ExitTransition.None
       ) {
         itemContent(index, item.item)
