@@ -3,153 +3,156 @@ package com.doool.sample
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Button
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
 import androidx.compose.material.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
 import com.doool.list_animation.animateItemsIndexed
 import com.doool.list_animation.listAnimationState
 import com.doool.sample.ui.theme.SampleTheme
 import java.util.*
 
 class MainActivity : ComponentActivity() {
-  override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    setContent {
-      SampleTheme {
-        Sample()
-      }
+    val viewModel by lazy { SampleViewModel() }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            SampleTheme {
+                Sample(viewModel)
+            }
+        }
     }
-  }
 }
 
 @Stable
-data class Data(val text: String = "ADF", val color: Color = Color(Random().nextInt(255), Random().nextInt(255), Random().nextInt(255)))
+data class Data(
+    val uuid: String = UUID.randomUUID().toString(),
+    val color: Color = Color(
+        Random().nextInt(255),
+        Random().nextInt(255),
+        Random().nextInt(255)
+    )
+)
 
+class SampleViewModel : ViewModel() {
+    var uuids by mutableStateOf((0..10).map { Data() })
 
+    fun add() {
+        uuids = uuids.plus(Data())
+    }
+
+    fun shuffle() {
+        uuids = uuids.shuffled()
+    }
+
+    fun remove(uuid: Data) {
+        uuids = uuids.minus(uuid)
+    }
+
+    fun removeLast() {
+        if (uuids.isEmpty()) {
+            return
+        }
+        uuids = uuids.dropLast(1)
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun Sample() {
+fun Sample(viewModel: SampleViewModel) {
 
-  var uuids by remember {
-    mutableStateOf(
-      (0 .. 10).map { Data(it.toString()) }
-    )
-  }
+    val state = rememberLazyListState()
 
-  fun add() {
-    uuids = uuids.plus(
-      Data(
-        uuids.size.toString(),
-        Color(Random().nextInt(255), Random().nextInt(255), Random().nextInt(255))
-      )
-    )
-  }
+    val items = listAnimationState(viewModel.uuids)
 
-  var a = -1
-  var b = -1
-
-  fun moveRandom() {
-    if (uuids.size > 5) {
-      val index = Random().nextInt(uuids.size)
-      val to = Random().nextInt(uuids.size)
-      var item = uuids.get(index)
-      uuids = uuids.minus(item)
-      uuids = uuids.subList(0, to) + item + uuids.subList(to, uuids.count())
+    Column {
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            state = state,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            stickyHeader {
+                Header()
+            }
+            animateItemsIndexed(items, key = { it.uuid }) { index, item ->
+                Item(item = item, viewModel = viewModel)
+            }
+        }
+        Buttons(viewModel = viewModel)
     }
-  }
-
-  fun move(index: Int) {
-    if (a == -1) {
-      a = index
-      return
-    }
-    if (b == -1) {
-      b = index
-    }
-    if (uuids.size > 1) {
-      val index = a
-      val to = b
-      var item = uuids.get(index)
-      uuids = uuids.minus(item)
-      uuids = uuids.subList(0, to) + item + uuids.subList(to, uuids.count())
-    }
-    a = -1
-    b = -1
-  }
-
-  fun remove(uuid: Data) {
-    uuids = uuids.minus(uuid)
-  }
-
-  fun removeFirst() {
-    if (uuids.isEmpty()) {
-      return
-    }
-    uuids = uuids.dropLast(1)
-  }
-
-  val state = rememberLazyListState()
-
-  val items = listAnimationState(uuids)
-
-  Column {
-    Row(){
-      Button(onClick = { add()}) {}
-      Button(onClick = { removeFirst()}) {}
-      Button(onClick = { moveRandom()}) {}
-    }
-    LazyColumn(state = state) {
-      item {
-        Item(item = Data("asdfasf", Color(234, 25, 141)))
-      }
-      animateItemsIndexed(items, key = { Pair(it.text, it.color) }) { index, item ->
-        if (item.text.toInt() % 2 == 0) Item(item, { remove(item) }) { move(index) }
-        else Item2(item, { remove(item) }) { move(index) }
-      }
-    }
-  }
 }
 
 @Composable
-fun Item(item: Data, remove: () -> Unit = {}, function: () -> Unit = {}) {
-  Box(
-    Modifier
-      .background(color = item.color)
-      .fillMaxWidth()
-      .height(40.dp)
-      .clickable { function() }
-  ) {
-    Row {
-      Text(text = item.text)
-      Button(onClick = { remove() }) {
-
-      }
+private fun Header() {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(40.dp)
+            .background(Color.White),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text = "Compose LazyList Diff Animation")
     }
-  }
 }
 
 @Composable
-fun Item2(item: Data, remove: () -> Unit = {}, function: () -> Unit = {}) {
-  Box(
-    Modifier
-      .background(color = item.color)
-      .fillMaxWidth()
-      .height(100.dp)
-      .clickable { function() }
-  ) {
-    Text(text = item.text)
-    Button(onClick = { remove() }) {
-
+private fun Item(item: Data, viewModel: SampleViewModel) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .height(40.dp)
+            .background(item.color, shape = CircleShape)
+            .padding(horizontal = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            modifier = Modifier.weight(1f),
+            text = item.uuid,
+            overflow = TextOverflow.Ellipsis,
+            maxLines = 1
+        )
+        Spacer(modifier = Modifier.width(20.dp))
+        IconButton(onClick = { viewModel.remove(item) }) {
+            Icon(imageVector = Icons.Default.Delete, contentDescription = null)
+        }
     }
-  }
+}
+
+@Composable
+private fun Buttons(viewModel: SampleViewModel) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(60.dp)
+            .background(Color.White),
+        horizontalArrangement = Arrangement.SpaceAround,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Button(onClick = viewModel::add) {
+            Text(text = "Push")
+        }
+        Button(onClick = viewModel::removeLast) {
+            Text(text = "Pop")
+        }
+        Button(onClick = viewModel::shuffle) {
+            Text(text = "Shuffle")
+        }
+    }
 }
