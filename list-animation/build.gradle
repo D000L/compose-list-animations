@@ -54,3 +54,17 @@ dependencies {
     implementation "androidx.compose.runtime:runtime:$compose_version"
     implementation "androidx.compose.runtime:runtime-livedata:$compose_version"
 }
+
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication){
+                from components.release
+
+                groupId = 'com.d000l'
+                artifactId = 'diffAnimation'
+                version = '0.1.0'
+            }
+        }
+    }
+}
